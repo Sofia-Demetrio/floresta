@@ -1,6 +1,7 @@
 import sys
 import os
 
+# Adiciona a pasta raiz ao sys.path para conseguir importar de 'jogador'
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import pygame
@@ -8,16 +9,23 @@ from jogador.Player import Player
 
 pygame.init()
 
+# Configuração da janela
 LARGURA = 736
 ALTURA = 460
 tela = pygame.display.set_mode((LARGURA, ALTURA))
 pygame.display.set_caption("Floresta")
 
+# Carrega o fundo
 fundo = pygame.image.load("imagens/floresta.jpg").convert()
+LARGURA_FUNDO = fundo.get_width()
 
+# Instancia o jogador e o grupo de sprites
 player = Player(100, 300)
 todos_os_sprites = pygame.sprite.Group()
 todos_os_sprites.add(player)
+
+# Posição da câmera (deslocamento do fundo)
+cam_x = 0
 
 relogio = pygame.time.Clock()
 
@@ -29,10 +37,25 @@ while rodando:
         if evento.type == pygame.QUIT:
             rodando = False
 
+    # Atualiza a posição e animação do player na tela
     todos_os_sprites.update()
 
-    # Desenha o fundo e depois os sprites por cima
-    tela.blit(fundo, (0, 0))
+    # Se a menina chegar perto da borda direita/esquerda, o fundo acompanha
+    if player.rect.right > LARGURA - 150 and player.velocidade_x > 0:
+        cam_x -= player.velocidade_x
+        player.rect.right = LARGURA - 150
+    elif player.rect.left < 150 and player.velocidade_x < 0:
+        cam_x -= player.velocidade_x
+        player.rect.left = 150
+
+    # Faz o fundo rodar de forma infinita (loop)
+    offset_fundo = cam_x % LARGURA_FUNDO
+
+    # Desenha o fundo repetido lado a lado
+    tela.blit(fundo, (offset_fundo - LARGURA_FUNDO, 0))
+    tela.blit(fundo, (offset_fundo, 0))
+
+    # Desenha o jogador por cima
     todos_os_sprites.draw(tela)
 
     pygame.display.flip()
