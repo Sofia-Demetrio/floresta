@@ -1,0 +1,40 @@
+import sys
+import os
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+import pygame
+from jogador.Player import Player
+
+pygame.init()
+
+LARGURA = 736
+ALTURA = 460
+tela = pygame.display.set_mode((LARGURA, ALTURA))
+pygame.display.set_caption("Floresta")
+
+fundo = pygame.image.load("imagens/floresta.jpg").convert()
+
+player = Player(100, 300)
+todos_os_sprites = pygame.sprite.Group()
+todos_os_sprites.add(player)
+
+relogio = pygame.time.Clock()
+
+rodando = True
+while rodando:
+    relogio.tick(60)
+
+    for evento in pygame.event.get():
+        if evento.type == pygame.QUIT:
+            rodando = False
+
+    todos_os_sprites.update()
+
+    # Desenha o fundo e depois os sprites por cima
+    tela.blit(fundo, (0, 0))
+    todos_os_sprites.draw(tela)
+
+    pygame.display.flip()
+
+pygame.quit()
