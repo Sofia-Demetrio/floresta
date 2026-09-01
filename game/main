@@ -1,11 +1,12 @@
 import sys
 import os
 
-# Adiciona a pasta raiz ao sys.path para conseguir importar de 'jogador'
+# Adiciona a pasta raiz ao sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import pygame
 from jogador.Player import Player
+from itens.Moeda import Moeda
 
 pygame.init()
 
@@ -19,14 +20,16 @@ pygame.display.set_caption("Floresta")
 fundo = pygame.image.load("imagens/floresta.jpg").convert()
 LARGURA_FUNDO = fundo.get_width()
 
-# Instancia o jogador e o grupo de sprites
+# Instancia o jogador
 player = Player(100, 300)
-todos_os_sprites = pygame.sprite.Group()
-todos_os_sprites.add(player)
 
-# Posição da câmera (deslocamento do fundo)
+# Instancia moedas pelo cenário (definindo suas posições no mundo virtual)
+moedas = pygame.sprite.Group()
+moedas.add(Moeda(300, 320))
+moedas.add(Moeda(600, 320))
+moedas.add(Moeda(900, 320))
+
 cam_x = 0
-
 relogio = pygame.time.Clock()
 
 rodando = True
@@ -37,10 +40,10 @@ while rodando:
         if evento.type == pygame.QUIT:
             rodando = False
 
-    # Atualiza a posição e animação do player na tela
-    todos_os_sprites.update()
+    # Atualiza o jogador
+    player.update()
 
-    # Se a menina chegar perto da borda direita/esquerda, o fundo acompanha
+    # Move a câmera se o jogador chegar perto das margens da tela
     if player.rect.right > LARGURA - 150 and player.velocidade_x > 0:
         cam_x -= player.velocidade_x
         player.rect.right = LARGURA - 150
@@ -48,15 +51,18 @@ while rodando:
         cam_x -= player.velocidade_x
         player.rect.left = 150
 
-    # Faz o fundo rodar de forma infinita (loop)
+    # Atualiza a posição e animação das moedas com base na câmera
+    moedas.update(cam_x)
+
+    # Cálculo do fundo em loop
     offset_fundo = cam_x % LARGURA_FUNDO
 
-    # Desenha o fundo repetido lado a lado
+    # Desenho
     tela.blit(fundo, (offset_fundo - LARGURA_FUNDO, 0))
     tela.blit(fundo, (offset_fundo, 0))
-
-    # Desenha o jogador por cima
-    todos_os_sprites.draw(tela)
+    
+    moedas.draw(tela)
+    tela.blit(player.image, player.rect)
 
     pygame.display.flip()
 
