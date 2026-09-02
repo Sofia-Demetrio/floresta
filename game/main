@@ -1,12 +1,13 @@
 import sys
 import os
 
-# Adiciona a pasta raiz ao sys.path
+# Adiciona a pasta raiz ao sys.path para importações modulares
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import pygame
 from jogador.Player import Player
 from itens.Moeda import Moeda
+from gerenciadores.GerenciadorColisao import GerenciadorColisao
 
 pygame.init()
 
@@ -20,14 +21,19 @@ pygame.display.set_caption("Floresta")
 fundo = pygame.image.load("imagens/floresta.jpg").convert()
 LARGURA_FUNDO = fundo.get_width()
 
-# Instancia o jogador
-player = Player(100, 300)
+# Instancia o jogador na posição inicial desejada (Y = 320 define a linha do chão inicial)
+player = Player(100, 320)
 
-# Instancia moedas pelo cenário (definindo suas posições no mundo virtual)
+# Instancia as moedas
 moedas = pygame.sprite.Group()
 moedas.add(Moeda(300, 320))
 moedas.add(Moeda(600, 200))
 moedas.add(Moeda(900, 320))
+moedas.add(Moeda(1200, 200))
+moedas.add(Moeda(1500, 320))
+
+# Instancia o Gerenciador de Colisões
+gerenciador_colisao = GerenciadorColisao(player, moedas)
 
 cam_x = 0
 relogio = pygame.time.Clock()
@@ -40,10 +46,10 @@ while rodando:
         if evento.type == pygame.QUIT:
             rodando = False
 
-    # Atualiza o jogador
+    # Atualiza movimentação, pulo, gravidade e animação do player
     player.update()
 
-    # Move a câmera se o jogador chegar perto das margens da tela
+    # Controle da câmera acompanhando a movimentação horizontal
     if player.rect.right > LARGURA - 150 and player.velocidade_x > 0:
         cam_x -= player.velocidade_x
         player.rect.right = LARGURA - 150
@@ -51,16 +57,18 @@ while rodando:
         cam_x -= player.velocidade_x
         player.rect.left = 150
 
-    # Atualiza a posição e animação das moedas com base na câmera
+    # Atualiza moedas com base no deslocamento da câmera
     moedas.update(cam_x)
 
-    # Cálculo do fundo em loop
-    offset_fundo = cam_x % LARGURA_FUNDO
+    # Processa as colisões com as moedas
+    gerenciador_colisao.checar_todas()
 
-    # Desenho
+    # Renderização do fundo infinito
+    offset_fundo = cam_x % LARGURA_FUNDO
     tela.blit(fundo, (offset_fundo - LARGURA_FUNDO, 0))
     tela.blit(fundo, (offset_fundo, 0))
     
+    # Desenha os elementos na tela
     moedas.draw(tela)
     tela.blit(player.image, player.rect)
 
