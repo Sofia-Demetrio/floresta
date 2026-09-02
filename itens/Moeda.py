@@ -9,8 +9,8 @@ class Moeda(pygame.sprite.Sprite):
         pasta_sprites = os.path.join(diretorio_raiz, 'imagens', 'sprites')
         
         # Define o novo tamanho da moeda em pixels (Largura, Altura)
-        LARGURA_MOEDA = 40
-        ALTURA_MOEDA = 40
+        LARGURA_MOEDA = 45
+        ALTURA_MOEDA = 45
         
         # Carrega os quadros da moeda e redimensiona cada um
         self.frames = []

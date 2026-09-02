@@ -26,7 +26,7 @@ player = Player(100, 300)
 # Instancia moedas pelo cenário (definindo suas posições no mundo virtual)
 moedas = pygame.sprite.Group()
 moedas.add(Moeda(300, 320))
-moedas.add(Moeda(600, 320))
+moedas.add(Moeda(600, 200))
 moedas.add(Moeda(900, 320))
 
 cam_x = 0
