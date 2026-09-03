@@ -6,7 +6,8 @@ class Moeda(pygame.sprite.Sprite):
         super().__init__()
         
         diretorio_raiz = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-        pasta_sprites = os.path.join(diretorio_raiz, 'imagens', 'sprites')
+        pasta_sprites = os.path.join(diretorio_raiz, 'assets', 'imagens', 'sprites')        
+
         
         # Define o novo tamanho da moeda em pixels (Largura, Altura)
         LARGURA_MOEDA = 45

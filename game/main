@@ -10,6 +10,7 @@ from itens.Moeda import Moeda
 from gerenciadores.GerenciadorColisao import GerenciadorColisao
 
 pygame.init()
+pygame.mixer.init()
 
 # Configuração da janela
 LARGURA = 736
@@ -17,14 +18,24 @@ ALTURA = 460
 tela = pygame.display.set_mode((LARGURA, ALTURA))
 pygame.display.set_caption("Floresta")
 
+# Caminho base do projeto
+diretorio_raiz = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+
 # Carrega o fundo
-fundo = pygame.image.load("imagens/floresta.jpg").convert()
+caminho_fundo = os.path.join(diretorio_raiz, 'assets', 'imagens', 'floresta.jpg')
+fundo = pygame.image.load(caminho_fundo).convert()
 LARGURA_FUNDO = fundo.get_width()
 
-# Instancia o jogador na posição inicial desejada (Y = 320 define a linha do chão inicial)
-player = Player(100, 320)
+# Carrega a trilha sonora (se existir)
+caminho_musica = os.path.join(diretorio_raiz, 'assets', 'sons', 'musica', 'trilha_sonora.mp3')
+if os.path.exists(caminho_musica):
+    pygame.mixer.music.load(caminho_musica)
+    pygame.mixer.music.set_volume(0.3)
+    pygame.mixer.music.play(-1)
 
-# Instancia as moedas
+# Instancia o jogador e moedas
+player = Player(50, 255)
+
 moedas = pygame.sprite.Group()
 moedas.add(Moeda(300, 320))
 moedas.add(Moeda(600, 200))
@@ -32,24 +43,28 @@ moedas.add(Moeda(900, 320))
 moedas.add(Moeda(1200, 200))
 moedas.add(Moeda(1500, 320))
 
-# Instancia o Gerenciador de Colisões
 gerenciador_colisao = GerenciadorColisao(player, moedas)
 
 cam_x = 0
 relogio = pygame.time.Clock()
 
+# Limpa a fila de eventos do sistema antes de iniciar a janela
+pygame.event.clear()
+
 rodando = True
 while rodando:
-    relogio.tick(60)
-
+    # 1. Processamento de Eventos
     for evento in pygame.event.get():
         if evento.type == pygame.QUIT:
             rodando = False
+        elif evento.type == pygame.KEYDOWN:
+            if evento.key == pygame.K_ESCAPE:
+                rodando = False
 
-    # Atualiza movimentação, pulo, gravidade e animação do player
+    # 2. Atualizações de Estado
     player.update()
 
-    # Controle da câmera acompanhando a movimentação horizontal
+    # Controle da câmera
     if player.rect.right > LARGURA - 150 and player.velocidade_x > 0:
         cam_x -= player.velocidade_x
         player.rect.right = LARGURA - 150
@@ -57,21 +72,21 @@ while rodando:
         cam_x -= player.velocidade_x
         player.rect.left = 150
 
-    # Atualiza moedas com base no deslocamento da câmera
     moedas.update(cam_x)
-
-    # Processa as colisões com as moedas
     gerenciador_colisao.checar_todas()
 
-    # Renderização do fundo infinito
+    # 3. Desenho / Renderização
     offset_fundo = cam_x % LARGURA_FUNDO
     tela.blit(fundo, (offset_fundo - LARGURA_FUNDO, 0))
     tela.blit(fundo, (offset_fundo, 0))
     
-    # Desenha os elementos na tela
     moedas.draw(tela)
     tela.blit(player.image, player.rect)
 
     pygame.display.flip()
+    
+    # Garante a taxa de 60 quadros por segundo
+    relogio.tick(60)
 
 pygame.quit()
+sys.exit()
