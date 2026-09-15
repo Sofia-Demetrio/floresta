@@ -5,10 +5,7 @@ import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import pygame
-from gerenciadores.GerenciadorColisao import GerenciadorColisao
-from inimigos.Monstro import Monstro
-from itens.Moeda import Moeda
-from jogador.Player import Player
+from fases.Fase1 import Fase1
 
 # Inicialização do Pygame
 pygame.mixer.pre_init(44100, -16, 2, 512)
@@ -16,12 +13,11 @@ pygame.init()
 pygame.font.init()
 pygame.mixer.init()
 
-# 1. RESOLUÇÃO VIRTUAL (Interna do Jogo)
+# Resoluções
 LARGURA_VIRTUAL = 736
 ALTURA_VIRTUAL = 460
 superficie_virtual = pygame.Surface((LARGURA_VIRTUAL, ALTURA_VIRTUAL))
 
-# 2. JANELA REAL (Janela redimensionável do sistema)
 LARGURA_JANELA = 736
 ALTURA_JANELA = 460
 tela = pygame.display.set_mode(
@@ -29,88 +25,17 @@ tela = pygame.display.set_mode(
 )
 pygame.display.set_caption('Floresta')
 
-# Caminho base do projeto
 diretorio_raiz = os.path.dirname(os.path.abspath(__file__))
 
-# Carrega o fundo
-caminho_fundo = os.path.join(
-    diretorio_raiz, 'assets', 'imagens', 'floresta.jpg'
-)
-fundo = pygame.image.load(caminho_fundo).convert()
-LARGURA_FUNDO = fundo.get_width()
+# Instancia a Fase 1
+fase_atual = Fase1(diretorio_raiz, LARGURA_VIRTUAL, ALTURA_VIRTUAL)
 
-# --- HUD (INTERFACE DO JOGADOR) ---
-fonte_hud = pygame.font.SysFont('Arial', 20, bold=True)
-
-# Busca o arquivo 'moeda 4.png' na estrutura de pastas
-caminho_moeda_4 = os.path.join(
-    diretorio_raiz,
-    'assets',
-    'imagens',
-    'sprites',
-    'itens',
-    'moeda 4.png',
-)
-
-if not os.path.exists(caminho_moeda_4):
-  caminho_moeda_4 = os.path.join(
-      diretorio_raiz, 'assets', 'imagens', 'moeda 4.png'
-  )
-
-moeda_hud_original = pygame.image.load(caminho_moeda_4).convert_alpha()
-
-# Personalização do tamanho da moeda no HUD
-LARGURA_MOEDA_HUD = 24
-ALTURA_MOEDA_HUD = 24
-moeda_hud_img = pygame.transform.scale(
-    moeda_hud_original, (LARGURA_MOEDA_HUD, ALTURA_MOEDA_HUD)
-)
-
-# Trilha sonora
-caminho_musica = os.path.join(
-    diretorio_raiz,
-    'assets',
-    'som',
-    'paulyudin-fairy-tale-ballet-310250.mp3',
-)
-
-if os.path.exists(caminho_musica):
-  try:
-    pygame.mixer.music.load(caminho_musica)
-    pygame.mixer.music.set_volume(0.3)
-    pygame.mixer.music.play(-1)
-    print('Música carregada e tocando em loop!')
-  except pygame.error as e:
-    print(f'[ERRO PYGAME] Falha ao reproduzir o áudio: {e}')
-else:
-  print(f'[ERRO CAMINHO] O arquivo não foi encontrado em:\n{caminho_musica}')
-
-# Instancia o jogador e moedas do cenário
-player = Player(50, 255)
-
-moedas = pygame.sprite.Group()
-moedas.add(Moeda(300, 320))
-moedas.add(Moeda(600, 200))
-moedas.add(Moeda(900, 320))
-moedas.add(Moeda(1200, 200))
-moedas.add(Moeda(1500, 320))
-
-# Instancia os monstros do cenário
-monstros = pygame.sprite.Group()
-monstros.add(Monstro(500, 320, limite_esquerda=-100, limite_direita=200))
-monstros.add(Monstro(1000, 320, limite_esquerda=-150, limite_direita=150))
-
-# Instancia o Gerenciador de Colisão passando player, moedas e monstros
-gerenciador_colisao = GerenciadorColisao(player, moedas, monstros)
-
-cam_x = 0
 relogio = pygame.time.Clock()
-
 pygame.event.clear()
 
 rodando = True
 while rodando:
-  # 1. Processamento de Eventos
+  # 1. Eventos
   for evento in pygame.event.get():
     if evento.type == pygame.QUIT:
       rodando = False
@@ -123,48 +48,13 @@ while rodando:
           (LARGURA_JANELA, ALTURA_JANELA), pygame.RESIZABLE
       )
 
-  # 2. Atualizações de Estado
-  player.update()
+  # 2. Atualiza estado da fase
+  fase_atual.atualizar()
 
-  if player.rect.right > LARGURA_VIRTUAL - 150 and player.velocidade_x > 0:
-    cam_x -= player.velocidade_x
-    player.rect.right = LARGURA_VIRTUAL - 150
-  elif player.rect.left < 150 and player.velocidade_x < 0:
-    cam_x -= player.velocidade_x
-    player.rect.left = 150
+  # 3. Desenha na superfície virtual
+  fase_atual.desenhar(superficie_virtual)
 
-  moedas.update(cam_x)
-  monstros.update(cam_x)
-  gerenciador_colisao.checar_todas()
-
-  # 3. Desenho na SUPERFÍCIE VIRTUAL
-  offset_fundo = cam_x % LARGURA_FUNDO
-  superficie_virtual.blit(fundo, (offset_fundo - LARGURA_FUNDO, 0))
-  superficie_virtual.blit(fundo, (offset_fundo, 0))
-
-  moedas.draw(superficie_virtual)
-  monstros.draw(superficie_virtual)
-  superficie_virtual.blit(player.image, player.rect)
-
-  # --- RENDERIZAÇÃO DO HUD ---
-  superficie_virtual.blit(moeda_hud_img, (15, 15))
-
-  texto_moedas = fonte_hud.render(
-      f'x {gerenciador_colisao.pontos_moedas}', True, (255, 255, 255)
-  )
-  sombra_moedas = fonte_hud.render(
-      f'x {gerenciador_colisao.pontos_moedas}', True, (0, 0, 0)
-  )
-
-  pos_x_texto = 15 + moeda_hud_img.get_width() + 8
-  pos_y_texto = (
-      15 + (moeda_hud_img.get_height() // 2) - (texto_moedas.get_height() // 2)
-  )
-
-  superficie_virtual.blit(sombra_moedas, (pos_x_texto + 1, pos_y_texto + 1))
-  superficie_virtual.blit(texto_moedas, (pos_x_texto, pos_y_texto))
-
-  # 4. Cálculo de Escala Mantendo Proporção (Letterboxing)
+  # 4. Dimensionamento / Letterboxing
   escala = min(
       LARGURA_JANELA / LARGURA_VIRTUAL, ALTURA_JANELA / ALTURA_VIRTUAL
   )
@@ -178,7 +68,6 @@ while rodando:
   pos_x = (LARGURA_JANELA - nova_largura) // 2
   pos_y = (ALTURA_JANELA - nova_altura) // 2
 
-  # 5. Exibição na Tela Real
   tela.fill((0, 0, 0))
   tela.blit(superficie_escalada, (pos_x, pos_y))
 
