@@ -3,6 +3,7 @@ import pygame
 
 from gerenciadores.GerenciadorColisao import GerenciadorColisao
 from inimigos.Monstro import Monstro
+from inimigos.LoboMal import LoboMal
 from itens.Moeda import Moeda
 from jogador.Player import Player
 
@@ -15,18 +16,14 @@ class Fase1:
     self.ALTURA_VIRTUAL = altura_virtual
 
     # --- LIMITES VERTICAIS DO JOGADOR NA FASE ---
-    self.LIMITE_Y_MIN = 250  # Posição Y máxima para SUBIR (evita flutuar no céu)
-    self.LIMITE_Y_MAX = 330  # Posição Y máxima para DESCER (limite do chão)
+    self.LIMITE_Y_MIN = 250  # trava superior (rede de segurança)
+    self.LIMITE_Y_MAX = 330  # trava inferior (chão)
 
     # Lista de caminhos possíveis para encontrar a imagem do fundo
     caminhos_fundo = [
         os.path.join(
             self.diretorio_raiz,
-            'assets',
-            'imagens',
-            'sprites',
-            'cenario',
-            'floresta.jpg',
+            'assets', 'imagens', 'sprites', 'cenario', 'floresta.jpg',
         ),
         os.path.join(
             self.diretorio_raiz, 'assets', 'imagens', 'cenario', 'floresta.jpg'
@@ -58,11 +55,7 @@ class Fase1:
 
     caminho_moeda_4 = os.path.join(
         self.diretorio_raiz,
-        'assets',
-        'imagens',
-        'sprites',
-        'itens',
-        'moeda 4.png',
+        'assets', 'imagens', 'sprites', 'itens', 'moeda 4.png',
     )
     if not os.path.exists(caminho_moeda_4):
       caminho_moeda_4 = os.path.join(
@@ -79,9 +72,7 @@ class Fase1:
     # --- MÚSICA ---
     caminho_musica = os.path.join(
         self.diretorio_raiz,
-        'assets',
-        'som',
-        'paulyudin-fairy-tale-ballet-310250.mp3',
+        'assets', 'som', 'paulyudin-fairy-tale-ballet-310250.mp3',
     )
     if os.path.exists(caminho_musica):
       try:
@@ -97,6 +88,8 @@ class Fase1:
     # --- ENTIDADES DO NÍVEL ---
     self.pos_inicial_player = (50, 255)
     self.player = Player(self.pos_inicial_player[0], self.pos_inicial_player[1])
+    # Nesta fase só anda em X e pula. Sem W/S livre.
+    self.player.permitir_movimento_vertical = False
 
     self.moedas = pygame.sprite.Group()
     self.moedas.add(Moeda(300, 320))
@@ -112,6 +105,10 @@ class Fase1:
     self.monstros.add(
         Monstro(1000, 320, limite_esquerda=-150, limite_direita=150)
     )
+    # Lobo mal patrulhando mais à frente
+    self.monstros.add(
+        LoboMal(1300, 320, limite_esquerda=-100, limite_direita=200)
+    )
 
     self.gerenciador_colisao = GerenciadorColisao(
         player=self.player,
@@ -124,8 +121,9 @@ class Fase1:
   def atualizar(self):
     self.player.update()
 
-    # --- RESTRIÇÃO DO MOVIMENTO VERTICAL DO JOGADOR ---
-    # Só limita no Y quando o jogador estiver no chão (para permitir a física do pulo)
+    # --- REDE DE SEGURANÇA VERTICAL ---
+    # Como o W/S tá desligado nesta fase, o player só sai do chão pulando.
+    # Aqui só garantimos que ele nunca fique preso acima/abaixo do esperado.
     if getattr(self.player, 'no_chao', True):
       if self.player.rect.y < self.LIMITE_Y_MIN:
         self.player.rect.y = self.LIMITE_Y_MIN

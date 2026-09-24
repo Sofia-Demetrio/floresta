@@ -1,55 +1,61 @@
 import os
-import pygame 
+import pygame
 
-class lobo_mal(pygame.sprite.Sprite):
-  
-  def __init__(self, pos_x, pos_y, limite_esquerda=0, limite_direita=300, posicao_inicial=None, tamanho_padrao=None):
+
+class LoboMal(pygame.sprite.Sprite):
+
+  def __init__(self, pos_x, pos_y, limite_esquerda=0, limite_direita=300):
     super().__init__()
 
     diretorio_raiz = os.path.abspath(
-      os.path.join(os.path.dirname(__file__), '..')
+        os.path.join(os.path.dirname(__file__), '..')
     )
     pasta_sprites = os.path.join(
-      diretorio_raiz, 'assets', 'imagens', 'sprites', 'lobo_mal'
+        diretorio_raiz, 'assets', 'imagens', 'sprites', 'inimigo'
     )
-    self.imagem_parada = pygame.image.load(
-        os.path.join(pasta_sprites, 'lobo mal andando.png')
-    ).convert_alpha()
 
-    self.largura_padrao = self.imagem_parada.get_width()
-    self.altura_padrao = self.imagem_parada.get_height()
+    # Base principal
+    caminho_base = os.path.join(pasta_sprites, 'lobo mal andando.png')
+    if os.path.exists(caminho_base):
+      self.image_parada = pygame.image.load(caminho_base).convert_alpha()
+    else:
+      self.image_parada = pygame.Surface((48, 48))
+      self.image_parada.fill((100, 100, 100))
+
+    self.largura_padrao = 100
+    self.altura_padrao = 300
     self.tamanho_padrao = (self.largura_padrao, self.altura_padrao)
 
-#frames andando pra esquerda 
-    self.frames_esquerda = [
-        pygame.transform.scale(
-            pygame.image.load(
-                os.path.join(pasta_sprites, f'lobo mal andando ({i}).png')
-            ).convert_alpha(),
-            self.tamanho_padrao,
-        )
-        for i in range(1, 4)
-    ]
-#frames andando pra direita
+    # Função auxiliar para carregar frames com fallback automático
+    def carregar_frames(prefixo):
+      frames = []
+      for i in range(1, 4):
+        caminho = os.path.join(pasta_sprites, f'{prefixo} {i}.png')
+        if os.path.exists(caminho):
+          img = pygame.image.load(caminho).convert_alpha()
+          frames.append(pygame.transform.scale(img, self.tamanho_padrao))
+        else:
+          # Tenta sem o número se não achar o número
+          caminho_alt = os.path.join(pasta_sprites, f'{prefixo}.png')
+          if os.path.exists(caminho_alt):
+            img = pygame.image.load(caminho_alt).convert_alpha()
+            frames.append(pygame.transform.scale(img, self.tamanho_padrao))
+          else:
+            frames.append(self.image_parada)
+      return frames
+
+    self.frames_esquerda = carregar_frames('lobo mal andando')
     self.frames_direita = [
-        pygame.transform.flip(frame, True, False)
-        for frame in self.frames_esquerda
+        pygame.transform.flip(f, True, False) for f in self.frames_esquerda
     ]
+    self.frames_frente = carregar_frames('lobo mal frente')
+    self.frames_costas = carregar_frames('lobo mal costas')
 
-#frames andando pra cima 
-    self.frames_cima = [
-        pygame.transform.scale(
-            pygame.image.load(
-                os.path.join(pasta_sprites, f'lobo mal cima ({i}).png')
-            ).convert_alpha(),
-            self.tamanho_padrao,
-        )
-        for i in range(1, 4)
-    ]
+    self.frames_stun_esquerda = self.frames_esquerda
+    self.frames_stun_direita = self.frames_direita
 
-    # Estado inicial e Rect
     self.index_frame = 0
-    self.image = self.imagem_parada
+    self.image = self.image_parada
     self.rect = self.image.get_rect()
 
     self.pos_x_mundo = pos_x
@@ -63,44 +69,31 @@ class lobo_mal(pygame.sprite.Sprite):
     self.velocidade_movimento = 2
     self.direcao = -1
 
-    # --- CONTROLE DE STUN ---
     self.atordoado = False
-    self.duracao_stun = 1000  # Tempo de stun em milissegundos (1 segundo)
+    self.duracao_stun = 1000
     self.tempo_inicio_stun = 0
 
   def levar_dano(self):
-    """Método acionado ao tomar um golpe do jogador ou colisão."""
     if not self.atordoado:
       self.atordoado = True
       self.tempo_inicio_stun = pygame.time.get_ticks()
-      self.index_frame = 0  # Reinicia o ciclo de animação para o Stun
-
-      if self.som_stun:
-        self.som_stun.play()
+      self.index_frame = 0
 
   def update(self, cam_x=0):
     tempo_atual = pygame.time.get_ticks()
 
-    # --- LÓGICA QUANDO ESTÁ ATORDOADO ---
     if self.atordoado:
-      # O monstro NÃO anda enquanto estiver atordoado
-      # Escolhe os frames de stun espelhados de acordo com a última direção
-      frames_stun_atuais = (
+      frames_stun = (
           self.frames_stun_direita
           if self.direcao == 1
           else self.frames_stun_esquerda
       )
-      self.animar(frames_stun_atuais)
-
-      # Checa se o tempo de stun acabou
+      self.animar(frames_stun)
       if tempo_atual - self.tempo_inicio_stun >= self.duracao_stun:
         self.atordoado = False
-        self.index_frame = 0  # Reseta o frame para voltar a andar
-
-    # --- LÓGICA NORMAL (PATRULHA) ---
+        self.index_frame = 0
     else:
       self.pos_x_mundo += self.velocidade_movimento * self.direcao
-
       if self.pos_x_mundo >= self.limite_direita:
         self.pos_x_mundo = self.limite_direita
         self.direcao = -1
@@ -113,7 +106,6 @@ class lobo_mal(pygame.sprite.Sprite):
       else:
         self.animar(self.frames_esquerda)
 
-    # Atualiza a posição na tela com o deslocamento da câmera
     self.rect.x = self.pos_x_mundo + cam_x
 
   def animar(self, lista_frames):
